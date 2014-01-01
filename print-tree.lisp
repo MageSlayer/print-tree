@@ -29,6 +29,13 @@
 
 
 ;;=================================utility functions======================================
+(defun list? (x)
+  (cond ((listp x) t)
+	((numberp x) nil)
+	((stringp x) nil)
+	(t (assert nil nil "Objects other than numbers, strings and lists are not supported. Sorry..."))
+	))
+
 (defun make-rect2d-empty ()
   (make-rect2d :lefttop nil :rightbottom nil)
   )
@@ -314,9 +321,9 @@
 (defun box-tree-collect (tree)
   ;; creates a tree of text boxes to render
   (mapcar #'(lambda (x)
-	      (if (atom x)
-		  (make-textbox-dims (princ-to-string x))
+	      (if (list? x)
 		  (box-tree-collect x)
+		  (make-textbox-dims (princ-to-string x))
 		  ))
 	  tree)
   )
