@@ -1,4 +1,4 @@
-(declaim (optimize (debug 3)))
+;;(declaim (optimize (debug 3)))
 
 ;;=================================params=================================================
 (defparameter *spacing* 2)		   ; number of symbols between graphical objects
@@ -58,6 +58,7 @@
   parent     ; parent treeitem
   pos        ; actual print position after printing
   relpos     ; print position relative to parent center
+  total-width ; total tree width
   )
 
 (defun tree-transform (node level parent)
@@ -68,25 +69,27 @@
 
   (let ((result '())
 	(curlevel '())
-	(relx 0))
+	(relx 0)
+	(first-level-scalar (and (= level 0)
+				 (not (list? (car node)))))
+	)
 
     (multiple-value-bind (total-width vals val-widths widths) (node-describe node)
       ;; process this level
 
       ;; special processing on first node. It will become a single root.
-      (if (= level 0)
+      (if first-level-scalar
 	  (progn
-	    (assert (not (list? (car node))) nil "First/root element not list is required")
-
 	    ;; position root node at the center
-	    (setq relx (- total-width (div2 (car val-widths))))
+	    (setq relx (div2 total-width))
 
 	    ;; leave only one value in lists
-	    (setq vals (list (car vals)))
-	    (setq val-widths (list (car val-widths)))
-	    (setq widths (list (car widths)))
+	     (setq vals (list (car vals)))
+	     (setq val-widths (list (car val-widths)))
+	     (setq widths (list (car widths)))
 	    ))
 
+      ;; store current sub-level (level-branch) into results
       (setq curlevel
 	    (mapcar #'(lambda(val val-width width)
 			(let* ((offset-to-center (- (div2 width) (div2 val-width)))
@@ -96,6 +99,7 @@
 					       :val-width val-width
 					       :width width
 					       :pos nil
+					       :total-width total-width
 					       :relpos (+ offset-to-center (- relx (div2 total-width)))
 					       :parent parent)))
 
@@ -115,9 +119,9 @@
       )
 
     ;; add rest elements on level 0 as children
-    (if (= level 0)
-	(setq result
-	      (append result (tree-transform (cdr node) (+ level 1) (car curlevel)))))
+    (if first-level-scalar
+    	(setq result
+    	      (append result (tree-transform (cdr node) (+ level 1) (car curlevel)))))
 
     result
     )
@@ -152,20 +156,23 @@
 	 (level nil)
 	 )
 
+    ;; iterate over tree level starting from top
     (loop for curlevel from 0 to max-level
        do
 	 (setq level-txt "")
 	 (setq level-edges "")
 	 (setq level (level-collect levels curlevel))
 
+	 ;; accumulate current level nodes/edges
 	 (loop for curnode in level
 	    do
 	      (let* ((relpos (treeitem-relpos curnode))
 		     (val (treeitem-val curnode))
+		     (total-width (treeitem-total-width curnode))
 		     (parent (treeitem-parent curnode))
 
 		     ;; parent left coordinate
-		     (parent-pos (if (not parent) 0 (treeitem-pos parent)))
+		     (parent-pos (if (not parent) (div2 total-width) (treeitem-pos parent)))
 		     ;; parent width of its value text only
 		     (parent-val-width (if (not parent) 0 (treeitem-val-width parent)))
 
@@ -173,14 +180,15 @@
 		     (curpos (+ parent-center relpos))
 		     )
 
+		;; print nodes into current line
 		(setq level-txt
 		      (print-into-x level-txt curpos val))
 
+		;; if top level, print node edges into current line
 		(if parent
 		    (setq level-edges
 			  (print-into-x level-edges curpos (if (= curpos parent-center) "|"
 							       (if (< curpos parent-center) "/" "\\")))))
-
 
 		(setf (treeitem-pos curnode) curpos)                          ;; save node position in case if it is a parent
 		)
@@ -197,9 +205,9 @@
 
 
 ;; ================text cases=================================================
-;;(print-tree '(("A" "AA") ("BC" "D") "EFG"))
-;;(print-tree '("A" ("BC" "D") "EFG"))
-;;(print-tree (list 1 2 3 (list 20 30 (list 10 20 30) (list 10 20 30)) "234" "Привет"))
+(print-tree '("A" ("BC" "D") "EFG"))
+(print-tree '(("A" "AA") ("BC" "D") "EFG"))
+(print-tree (list 1 2 3 (list 20 30 (list 10 20 30) (list 10 20 30)) "234" "Привет"))
 
 ;;             1
 ;; 2   3      20       234   Привет
