@@ -12,6 +12,10 @@
 	(t (assert nil nil "Objects other than numbers, strings and lists are not supported. Sorry..."))
 	))
 
+(defun div2 (x)
+  (truncate (/ x 2))
+  )
+
 (defun sum(x)
   (reduce #'+ x :initial-value 0)
   )
@@ -205,7 +209,8 @@
 
 
 ;; ================text cases=================================================
-(print-tree '("A" ("BC" "D") "EFG"))
+;;(print-tree '(1 2 3))
+;;(print-tree '("A" ("BC" "D") "EFG"))
 (print-tree '(("A" "AA") ("BC" "D") "EFG"))
 (print-tree (list 1 2 3 (list 20 30 (list 10 20 30) (list 10 20 30)) "234" "Привет"))
 
